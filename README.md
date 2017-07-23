@@ -16,8 +16,8 @@ Properties
 | :------------ | :------: | :------ | :---------- |
 | **Source Path** | **Y** | None | The full path of the file or directory that is to be converted. In the case of a directory, if fileRegex is set, then only files in the source directory matching the regex expression will be moved. Otherwise, all files in the directory will be moved. For example: `hdfs://hostname/tmp`. You can use globbing syntax here. |
 | **File Regular Expression** | **N** | None | Regular expression to filter the files in the source directory that will be moved. This is useful when the globbing syntax in the source directory is not precise enough for your files. |
-| **File Contents Regular Expression** | **N** | None| A Regular Expression for checking the contents of a file. If the value is not found in the file, the plugin throws an exception and stops the pipeline. |
-| **Fail if the file is empty?** | **Y** | true | If set to true, the pipeline will fail if the file is empty. |
+| **File Contents Regular Expressions** | **N** | None| A list of Regular Expressions that all need to be present in the file otherwise the plugin will throw an exception and stop the pipeline. |
+| **Fail if the file is empty?** | **Y** | true | If set to true, the pipeline will fail if the file is empty. Otherwise, it will ignore that check. |
 
 
 Getting Started
