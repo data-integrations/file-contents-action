@@ -23,11 +23,11 @@
           }
         },
         {
-          "widget-type": "textbox",
-          "label": "Regular Expression Pattern that should be in the file",
+          "widget-type": "dsv",
+          "label": "Regular Expression patterns that should be in the file.",
           "name": "fileContentsRegex",
           "widget-attributes": {
-            "placeholder": "HEADER.*"
+            "delimiter": "~"
           }
         },
         {

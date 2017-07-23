@@ -36,6 +36,9 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
@@ -68,8 +71,13 @@ public class FileContentsAction extends Action {
   public void run(ActionContext context) throws Exception {
     config.validate();
     Path source = new Path(config.sourceFilePath);
-    Pattern fileContentsPattern =
-      Strings.isNullOrEmpty(config.fileContentsRegex) ? null : Pattern.compile(config.fileContentsRegex);
+    List<Pattern> fileContentsRegexes = new ArrayList();
+    if (!Strings.isNullOrEmpty(config.fileContentsRegex)) {
+      String[] splits = config.fileContentsRegex.split("~");
+      for (String fileContentsRegexString : splits) {
+        fileContentsRegexes.add(Pattern.compile(fileContentsRegexString));
+      }
+    }
 
     FileSystem fileSystem = source.getFileSystem(new Configuration());
 
@@ -79,8 +87,8 @@ public class FileContentsAction extends Action {
         throw new EmptyFileException(String.format("Empty file %s",
                                                  source.toString()));
       }
-      if (fileContentsPattern != null &&
-          !hasContentsSingleFile(source, fileSystem, fileContentsPattern)) {
+      if (fileContentsRegexes.size() > 0 &&
+          !hasContentsSingleFile(source, fileSystem, fileContentsRegexes)) {
         throw new MissingContentsException(String.format("The pattern %s was not found in file %s",
                                                  config.fileContentsRegex,
                                                  source.toString()));
@@ -113,8 +121,8 @@ public class FileContentsAction extends Action {
             throw new EmptyFileException(String.format("Empty file %s",
                                                      source.toString()));
           }
-          if (fileContentsPattern != null &&
-              !hasContentsSingleFile(source, fileSystem, fileContentsPattern)) {
+          if (fileContentsRegexes.size() > 0 &&
+              !hasContentsSingleFile(source, fileSystem, fileContentsRegexes)) {
             throw new MissingContentsException(String.format("The pattern %s was not found in file %s",
                                                      config.fileContentsRegex,
                                                      source.toString()));
@@ -125,19 +133,27 @@ public class FileContentsAction extends Action {
   }
 
   private boolean hasContentsSingleFile(Path source, FileSystem fileSystem,
-                                        Pattern fileContentsPattern) throws IOException {
+                                        List<Pattern> fileContentsPattern) throws IOException {
+    boolean[] found = new boolean[fileContentsPattern.size()];
     try (BufferedReader br = new BufferedReader(new InputStreamReader(fileSystem.open(source)))) {
       String line;
       while ((line = br.readLine()) != null) {
-        Matcher matcher = fileContentsPattern.matcher(line);
-        if (matcher.matches()) {
-          return true;
+        for (int i = 0; i < fileContentsPattern.size(); i++) {
+          Matcher matcher = fileContentsPattern.get(i).matcher(line);
+          if (matcher.matches()) {
+            found[i] = true;
+          }
         }
       }
     } catch (IOException e) {
       throw new IOException(String.format("Failed treading file %s", source.toString()), e);
     }
-    return false;
+    for (int i = 0; i < found.length; i++) {
+      if (!found[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -204,7 +220,10 @@ public class FileContentsAction extends Action {
       }
       try {
         if (!failOnEmptyFile && !Strings.isNullOrEmpty(fileContentsRegex)) {
-          Pattern.compile(fileContentsRegex);
+          String[] regexes = fileContentsRegex.split("~");
+          for (String regex : regexes) {
+            Pattern.compile(regex);
+          }
         }
       } catch (Exception e) {
         throw new IllegalArgumentException("The regular expression pattern provided to check file contents " +
