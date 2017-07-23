@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "spec-version": "1.4"
+  },
+  "configuration-groups": [
+    {
+      "label": "Configuration Options",
+      "properties": [
+        {
+          "widget-type": "textbox",
+          "label": "Source Path",
+          "name": "sourceFilePath",
+          "widget-attributes": {
+            "placeholder": "E.g. /tmp/file.dat or /tmp/folder/"
+          }
+        },
+        {
+          "widget-type": "textbox",
+          "label": "File Regular Expression",
+          "name": "fileRegex",
+          "widget-attributes": {
+            "placeholder": "E.g. .*\\.dat"
+          }
+        },
+        {
+          "widget-type": "textbox",
+          "label": "Regular Expression Pattern that should be in the file",
+          "name": "fileContentsRegex",
+          "widget-attributes": {
+            "placeholder": "HEADER.*"
+          }
+        },
+        {
+          "widget-type": "select",
+          "label": "Fail if the file is empty?",
+          "name": "failOnEmptyFile",
+          "widget-attributes": {
+            "values": [
+              "true",
+              "false"
+            ],
+            "default": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "outputs": []
+}
