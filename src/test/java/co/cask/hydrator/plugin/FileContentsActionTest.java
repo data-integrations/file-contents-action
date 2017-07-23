@@ -17,16 +17,12 @@
 package co.cask.hydrator.plugin;
 
 import co.cask.cdap.etl.mock.common.MockPipelineConfigurer;
-import org.junit.ClassRule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.FileFilter;
 import java.net.URL;
 import java.util.regex.Pattern;
-
-import static org.junit.Assert.assertEquals;
 
 /**
  * Unit tests for {@link FileContentsAction}
