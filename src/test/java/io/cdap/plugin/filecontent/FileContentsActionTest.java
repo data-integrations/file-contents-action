@@ -16,6 +16,7 @@
 
 package io.cdap.plugin.filecontent;
 
+import io.cdap.cdap.etl.mock.action.MockActionContext;
 import io.cdap.cdap.etl.mock.common.MockPipelineConfigurer;
 import org.junit.Test;
 
@@ -40,63 +41,66 @@ public class FileContentsActionTest {
     }
   };
 
-
   @Test(expected = FileContentsAction.EmptyFileException.class)
   public void testSingleEmptyFile() throws Exception {
     ClassLoader classLoader = getClass().getClassLoader();
     URL emptyFile = classLoader.getResource(EMPTY_FILE);
-    FileContentsAction.FileContentsConfig config = new FileContentsAction.FileContentsConfig(emptyFile.getFile(),
-                                                                                             null, null, true);
+    FileContentsConfig config =
+      new FileContentsConfig(emptyFile.getFile(), null, null, true);
     MockPipelineConfigurer configurer = new MockPipelineConfigurer(null);
     new FileContentsAction(config).configurePipeline(configurer);
-    new FileContentsAction(config).run(null);
+    MockActionContext context = new MockActionContext();
+    new FileContentsAction(config).run(context);
   }
 
   @Test
   public void testSingleEmptyFileSuccess() throws Exception {
     ClassLoader classLoader = getClass().getClassLoader();
     URL emptyFile = classLoader.getResource(FILE_WITH_CONTENT_TO_MATCH);
-    FileContentsAction.FileContentsConfig config = new FileContentsAction.FileContentsConfig(emptyFile.getFile(),
-                                                                                             null, null, true);
+    FileContentsConfig config =
+      new FileContentsConfig(emptyFile.getFile(), null, null, true);
     MockPipelineConfigurer configurer = new MockPipelineConfigurer(null);
     new FileContentsAction(config).configurePipeline(configurer);
-    new FileContentsAction(config).run(null);
+    MockActionContext context = new MockActionContext();
+    new FileContentsAction(config).run(context);
   }
 
   @Test
   public void testSingleFile() throws Exception {
     ClassLoader classLoader = getClass().getClassLoader();
     URL emptyFile = classLoader.getResource(FILE_WITH_CONTENT_TO_MATCH);
-    FileContentsAction.FileContentsConfig config = new FileContentsAction.FileContentsConfig(emptyFile.getFile(),
-                                                                                             null, ".*", true);
+    FileContentsConfig config =
+      new FileContentsConfig(emptyFile.getFile(), null, ".*", true);
     MockPipelineConfigurer configurer = new MockPipelineConfigurer(null);
     new FileContentsAction(config).configurePipeline(configurer);
-    new FileContentsAction(config).run(null);
+    MockActionContext context = new MockActionContext();
+    new FileContentsAction(config).run(context);
   }
 
   @Test(expected = FileContentsAction.MissingContentsException.class)
   public void testSingleFileFailure() throws Exception {
     ClassLoader classLoader = getClass().getClassLoader();
     URL emptyFile = classLoader.getResource(FILE_WITH_CONTENT_TO_MATCH);
-    FileContentsAction.FileContentsConfig config =
-      new FileContentsAction.FileContentsConfig(emptyFile.getFile(), null, "not[0-9]there", true);
+    FileContentsConfig config =
+      new FileContentsConfig(emptyFile.getFile(), null, "not[0-9]there", true);
     MockPipelineConfigurer configurer = new MockPipelineConfigurer(null);
     new FileContentsAction(config).configurePipeline(configurer);
-    new FileContentsAction(config).run(null);
+    MockActionContext context = new MockActionContext();
+    new FileContentsAction(config).run(context);
   }
-
 
   @Test
   public void testFolder() throws Exception {
     ClassLoader classLoader = getClass().getClassLoader();
     URL emptyFile = classLoader.getResource(FILE_WITH_CONTENT_TO_MATCH);
 
-    FileContentsAction.FileContentsConfig config =
-      new FileContentsAction.FileContentsConfig(new File(emptyFile.getFile()).getParent(),
+    FileContentsConfig config =
+      new FileContentsConfig(new File(emptyFile.getFile()).getParent(),
                                                 "to_match.*", ".*need.*", true);
     MockPipelineConfigurer configurer = new MockPipelineConfigurer(null);
     new FileContentsAction(config).configurePipeline(configurer);
-    new FileContentsAction(config).run(null);
+    MockActionContext context = new MockActionContext();
+    new FileContentsAction(config).run(context);
   }
 
   @Test(expected = FileContentsAction.MissingContentsException.class)
@@ -104,11 +108,12 @@ public class FileContentsActionTest {
     ClassLoader classLoader = getClass().getClassLoader();
     URL emptyFile = classLoader.getResource(FILE_WITH_CONTENT_TO_MATCH);
 
-    FileContentsAction.FileContentsConfig config =
-      new FileContentsAction.FileContentsConfig(new File(emptyFile.getFile()).getParent(),
+    FileContentsConfig config =
+      new FileContentsConfig(new File(emptyFile.getFile()).getParent(),
                                                 "to_match.*", ".*not there.*", true);
     MockPipelineConfigurer configurer = new MockPipelineConfigurer(null);
     new FileContentsAction(config).configurePipeline(configurer);
-    new FileContentsAction(config).run(null);
+    MockActionContext context = new MockActionContext();
+    new FileContentsAction(config).run(context);
   }
 }

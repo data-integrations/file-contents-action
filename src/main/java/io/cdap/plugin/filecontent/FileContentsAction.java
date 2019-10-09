@@ -18,10 +18,9 @@ package io.cdap.plugin.filecontent;
 
 import com.google.common.base.Strings;
 import io.cdap.cdap.api.annotation.Description;
-import io.cdap.cdap.api.annotation.Macro;
 import io.cdap.cdap.api.annotation.Name;
 import io.cdap.cdap.api.annotation.Plugin;
-import io.cdap.cdap.api.plugin.PluginConfig;
+import io.cdap.cdap.etl.api.FailureCollector;
 import io.cdap.cdap.etl.api.PipelineConfigurer;
 import io.cdap.cdap.etl.api.action.Action;
 import io.cdap.cdap.etl.api.action.ActionContext;
@@ -40,8 +39,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.annotation.Nullable;
-
 
 /**
  * File Contents Action Plugin - Checks files for a specified regular expression
@@ -63,16 +60,20 @@ public class FileContentsAction extends Action {
   @Override
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) throws IllegalArgumentException {
     super.configurePipeline(pipelineConfigurer);
-    config.validate();
+    FailureCollector failureCollector = pipelineConfigurer.getStageConfigurer().getFailureCollector();
+    config.validate(failureCollector);
   }
 
   @Override
   public void run(ActionContext context) throws Exception {
-    config.validate();
-    Path source = new Path(config.sourceFilePath);
+    FailureCollector failureCollector = context.getFailureCollector();
+    config.validate(failureCollector);
+    failureCollector.getOrThrowException();
+
+    Path source = new Path(config.getSourceFilePath());
     List<Pattern> fileContentsRegexes = new ArrayList();
-    if (!Strings.isNullOrEmpty(config.fileContentsRegex)) {
-      String[] splits = config.fileContentsRegex.split("~");
+    if (!Strings.isNullOrEmpty(config.getFileContentsRegex())) {
+      String[] splits = config.getFileContentsRegex().split("~");
       for (String fileContentsRegexString : splits) {
         fileContentsRegexes.add(Pattern.compile(fileContentsRegexString));
       }
@@ -82,21 +83,21 @@ public class FileContentsAction extends Action {
 
     // Convert a single file
     if (fileSystem.exists(source) && fileSystem.getFileStatus(source).isFile()) {
-      if (config.failOnEmptyFile && fileSystem.getFileStatus(source).getLen() == 0) {
+      if (config.getFailOnEmptyFile() && fileSystem.getFileStatus(source).getLen() == 0) {
         throw new EmptyFileException(String.format("Empty file %s",
                                                  source.toString()));
       }
       if (fileContentsRegexes.size() > 0 &&
           !hasContentsSingleFile(source, fileSystem, fileContentsRegexes)) {
         throw new MissingContentsException(String.format("The pattern %s was not found in file %s",
-                                                 config.fileContentsRegex,
+                                                 config.getFileContentsRegex(),
                                                  source.toString()));
       }
     } else {
       // Convert all the files in a directory
       PathFilter filter = new PathFilter() {
         private final Pattern pattern =
-          Pattern.compile(config.fileRegex == null ? ".*" : config.fileRegex);
+          Pattern.compile(config.getFileRegex() == null ? ".*" : config.getFileRegex());
 
         @Override
         public boolean accept(Path path) {
@@ -111,19 +112,19 @@ public class FileContentsAction extends Action {
 
       if (listFiles.length == 0) {
         LOG.warn("Not converting any files from source {} matching regular expression",
-                 source.toString(), config.fileRegex);
+                 source.toString(), config.getFileRegex());
       }
       for (FileStatus file : listFiles) {
         if (!file.isDirectory()) { // ignore directories
           source = file.getPath();
-          if (config.failOnEmptyFile && fileSystem.getFileStatus(source).getLen() == 0) {
+          if (config.getFailOnEmptyFile() && fileSystem.getFileStatus(source).getLen() == 0) {
             throw new EmptyFileException(String.format("Empty file %s",
                                                      source.toString()));
           }
           if (fileContentsRegexes.size() > 0 &&
               !hasContentsSingleFile(source, fileSystem, fileContentsRegexes)) {
             throw new MissingContentsException(String.format("The pattern %s was not found in file %s",
-                                                     config.fileContentsRegex,
+                                                     config.getFileContentsRegex(),
                                                      source.toString()));
           }
         }
@@ -173,70 +174,4 @@ public class FileContentsAction extends Action {
     }
   }
 
-  /**
-   * Config class that contains all properties required for running the unload command.
-   */
-  public static class FileContentsConfig extends PluginConfig {
-    @Macro
-    @Description("The source location where the file or files live. You can use glob syntax here such as *.dat.")
-    private String sourceFilePath;
-
-    @Macro
-    @Nullable
-    @Description("A regular expression for filtering files such as .*\\.txt")
-    private String fileRegex;
-
-    @Macro
-    @Nullable
-    @Description("A regular expression for checking the contents of the file.")
-    private String fileContentsRegex;
-
-    @Macro
-    @Description("Set to true if this plugin should fail if the file is empty.")
-    private Boolean failOnEmptyFile;
-
-
-    public FileContentsConfig(String sourceFilePath, String fileRegex,
-                              String fileContentsRegex,
-                              Boolean failOnEmptyFile) {
-      this.sourceFilePath = sourceFilePath;
-      this.fileRegex = fileRegex;
-      this.fileContentsRegex = fileContentsRegex;
-      this.failOnEmptyFile = failOnEmptyFile;
-    }
-
-    /**
-     * Validates the config parameters required for unloading the data.
-     */
-    private void validate() throws IllegalArgumentException {
-      try {
-        if (!Strings.isNullOrEmpty(fileRegex)) {
-          Pattern.compile(fileRegex);
-        }
-      } catch (Exception e) {
-        throw new IllegalArgumentException("The regular expression pattern provided to match files " +
-                                             "is not a valid regular expression.", e);
-      }
-      try {
-        if (!failOnEmptyFile && !Strings.isNullOrEmpty(fileContentsRegex)) {
-          String[] regexes = fileContentsRegex.split("~");
-          for (String regex : regexes) {
-            Pattern.compile(regex);
-          }
-        }
-      } catch (Exception e) {
-        throw new IllegalArgumentException("The regular expression pattern provided to check file contents " +
-                                             "is not a valid regular expression.", e);
-      }
-      if (Strings.isNullOrEmpty(sourceFilePath)) {
-        throw new IllegalArgumentException("Source file or folder is required.");
-      }
-      try {
-        Path source = new Path(sourceFilePath);
-        source.getFileSystem(new Configuration());
-      } catch (IOException e) {
-        throw new IllegalArgumentException("Cannot determine the file system of the source file.", e);
-      }
-    }
-  }
 }
